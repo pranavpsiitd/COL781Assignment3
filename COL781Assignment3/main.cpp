@@ -10,8 +10,8 @@ GLint windowWidth = 1280;                    // Width of our window
 GLint windowHeight = 720;                    // Height of our window
 
 //Tree Parameters:-
-float h1=(float)(35.0*(3.14/180.0)), h2=(float)(-35.0f*(3.14/180.0));	//branching angles
-float R1=0.9f, R2=0.7f;		//contraction ratios
+float h1=(float)(25.0*(3.14/180.0)), h2=(float)(0.0f*(3.14/180.0));	//branching angles (for monopodial, h2=0)
+float R1=0.7f, R2=0.9f;		//contraction ratios
 float divergence = 0.0;				//divergence angle
 float R=0.15f, L=6.0f;		//Radius and length of the trunk
 int level = 9;				//number of growth levels
@@ -108,42 +108,50 @@ void drawBranch(float radius,float x, float y, float z) {
 	glutSolidCylinder(radius, r, 20, 20);
 }
 
-void drawModel() {
-	// Add a sphere to the scene.
-	glPushMatrix();
-		//drawBranch(1.0, 1.0, 1.0);
-	glPopMatrix();
-	glPushMatrix();
-		//drawBranch(0.0, 1.0, 0.0);
-	glPopMatrix();
-}
-
+//for drawing GMT1 model of tree using the given parameters
 void drawGMT1() {
 	queue<Branch> branches;
 	glPushMatrix();
-		drawBranch(R, 0.0f, L, 0.0f);
-		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R1*L*sin(h1)+windx, L+R1*L*cos(h1)+windy, windz));
-		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R2*L*sin(h2)+windx, L+R2*L*cos(h2)+windy, windz));
+		drawBranch(R, 0.0f, L, 0.0f);	//main trunk
+		//seeding the first two child branches:-
+		branches.push(Branch(R2*R, 0.0f, L, 0.0f, R2*L*sin(h2) + windx, L + R2*L*cos(h2) + windy, windz));
+		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R1*L*sin(h1) + windx, L + R1*L*cos(h1) + windy, windz));
 	glPopMatrix();
+	float H1 = h1;
 	for (int i = 1; i <= level; i++) {
 		queue<Branch> temp;
+		if (h2 == 0) {
+			//MONOPODIAL CASE FOR GENERATING CHILD BRANCHES OF AXIAL BRANCH:-
+			H1 = -H1;	//Alternate the sign of the banching angles
+			Branch mother = branches.front();	
+			branches.pop();
+			float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
+			glPushMatrix();
+				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
+				drawBranch(mother.radius, u, v, w);
+			glPopMatrix();
+			temp.push(Branch(R2*R, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + windx, mother.yEnd + windy + R2*v, mother.zEnd + windz));
+			temp.push(Branch(R1*R, mother.xEnd, mother.yEnd, mother.zEnd, R1*L*sin(H1) + windx + mother.xEnd, mother.yEnd + R1*L*cos(H1) + windy, mother.zEnd + windz));
+		}
 		while (!branches.empty()){
 			Branch mother = branches.front();
 			branches.pop();
 			float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
-			float S = sqrt(u*u + w*w), T = sqrt(u*u + w*w + v*v);
-			float dx = R1*(u*cos(h1) - (T / S)*w*sin(h1))+windx;
-			float dy = R1*v*cos(h1)+windy;
-			float dz = R1*(w*cos(h1) + (T / S)*u*sin(h1))+windz;
 			glPushMatrix();
 				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
 				drawBranch(mother.radius,u, v, w);
 			glPopMatrix();
+			//child branches are in a plane perpendicular to the plane of mother branch and down vector
+			float S = sqrt(u*u + w*w), T = sqrt(u*u + w*w + v*v);
+			float dx = R1*(u*cos(H1) - (T / S)*w*sin(H1)) + windx;
+			float dy = R1*v*cos(H1) + windy;
+			float dz = R1*(w*cos(H1) + (T / S)*u*sin(H1)) + windz;
 			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + dx, mother.yEnd + dy, mother.zEnd + dz));
-			dx = R2*(u*cos(h2) - (T / S)*w*sin(h2))+windx;
-			dy = R2*v*cos(h2)+windy;
-			dz = R2*(w*cos(h2) + (T / S)*u*sin(h2))+windz;
+			dx = R2*(u*cos(h2) - (T / S)*w*sin(h2)) + windx;
+			dy = R2*v*cos(h2) + windy;
+			dz = R2*(w*cos(h2) + (T / S)*u*sin(h2)) + windz;
 			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + dx, mother.yEnd + dy, mother.zEnd + dz));
+			
 		}
 		while (!temp.empty()){
 			branches.push(temp.front());
@@ -159,7 +167,7 @@ void display() {
 	glPushMatrix();
 		glRotatef((GLfloat)angle, 0.0f, 1.0f, 0.0f);
 		glTranslatef(0.0f, yPos, 0.0f);
-		glScalef(0.3f, 0.3f, 0.3f);
+		glScalef(0.15f, 0.15f, 0.15f);
 		drawGMT1();
 	glPopMatrix();
 
@@ -225,7 +233,9 @@ int main(int argc, char** argv) {
 	//initializing the light sources and enabling the hidden surface removal
 	init();
 
-	cout << "Press Space Bar to begin the Game!!" << endl;
+	cout << "Press A for changing angle" << endl;
+	cout << "Press M for moving the model" << endl;
+	cout << "Press X, Y and Z for changing the wind velocity vector" << endl;
 	// enter GLUT event processing cycle
 	//glutPassiveMotionFunc(update);		//to update mouse pointer positions
 	glutMainLoop();//enter the event loop
