@@ -130,8 +130,8 @@ void drawGMT1() {
 				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
 				drawBranch(mother.radius, u, v, w);
 			glPopMatrix();
-			temp.push(Branch(R2*R, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + windx, mother.yEnd + windy + R2*v, mother.zEnd + windz));
-			temp.push(Branch(R1*R, mother.xEnd, mother.yEnd, mother.zEnd, R1*L*sin(H1) + windx + mother.xEnd, mother.yEnd + R1*L*cos(H1) + windy, mother.zEnd + windz));
+			temp.push(Branch(R2*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + windx, mother.yEnd + windy + R2*v, mother.zEnd + windz));
+			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, R1*v*sin(H1) + windx + mother.xEnd, mother.yEnd + R1*v*cos(H1) + windy, mother.zEnd + windz));
 		}
 		while (!branches.empty()){
 			Branch mother = branches.front();
