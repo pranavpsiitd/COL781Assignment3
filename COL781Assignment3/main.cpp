@@ -42,6 +42,7 @@ struct Branch {
 	float zEnd;
 };
 
+void drawLeaf(void);
 
 //update the cursor positions:-
 void update(int x, int y) {
@@ -169,6 +170,7 @@ void display() {
 		glTranslatef(0.0f, yPos, 0.0f);
 		glScalef(0.15f, 0.15f, 0.15f);
 		drawGMT1();
+		drawLeaf();
 	glPopMatrix();
 
 	glutSwapBuffers();
@@ -241,4 +243,18 @@ int main(int argc, char** argv) {
 	glutMainLoop();//enter the event loop
 
 	return 0;//unreachable return statement :P
+}
+
+void drawLeaf(void) {
+	glColor3f(0.1, 0.9, 0.1);
+	glBegin(GL_POLYGON);
+	glVertex2f(0.0, 0.0);
+	glVertex2f(1.0, 0.7);
+	glVertex2f(1.3, 1.8);
+	glVertex2f(1.0, 2.8);
+	glVertex2f(0.0, 4.0);
+	glVertex2f(-1.0, 2.8);
+	glVertex2f(-1.3, 1.8);
+	glVertex2f(-1.0, 0.7);
+	glEnd();
 }
