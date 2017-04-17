@@ -13,8 +13,9 @@ GLint windowHeight = 720;                    // Height of our window
 float h1=(float)(35.0*(3.14/180.0)), h2=(float)(-35.0f*(3.14/180.0));	//branching angles
 float R1=0.9f, R2=0.7f;		//contraction ratios
 float divergence = 0.0;				//divergence angle
-float R=0.2f, L=6.0f;		//Radius and length of the trunk
+float R=0.15f, L=6.0f;		//Radius and length of the trunk
 int level = 9;				//number of growth levels
+float windx = 0.0f, windy = 0.0f, windz = 0.0f;	//wind direction
 
 
 //cursor position:-
@@ -53,11 +54,11 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 	switch (theKey)
 	{
 	case 'a':
-		angle = angle + 10.0f;
+		angle = angle + 5.0f;
 		glutPostRedisplay();
 		break;
 	case 'A':
-		angle = angle - 10.0f;
+		angle = angle - 5.0f;
 		glutPostRedisplay();
 		break;
 	case 'm':
@@ -66,6 +67,30 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		break;
 	case 'M':
 		yPos = yPos + 0.2f;
+		glutPostRedisplay();
+		break;
+	case 'x':
+		windx = windx + 0.05f;
+		glutPostRedisplay();
+		break;
+	case 'X':
+		windx = windx - 0.05f;
+		glutPostRedisplay();
+		break;
+	case 'y':
+		windy = windy + 0.05f;
+		glutPostRedisplay();
+		break;
+	case 'Y':
+		windy = windy - 0.05f;
+		glutPostRedisplay();
+		break;
+	case 'z':
+		windz = windz + 0.05f;
+		glutPostRedisplay();
+		break;
+	case 'Z':
+		windz = windz - 0.05f;
 		glutPostRedisplay();
 		break;
 	default:
@@ -97,8 +122,8 @@ void drawGMT1() {
 	queue<Branch> branches;
 	glPushMatrix();
 		drawBranch(R, 0.0f, L, 0.0f);
-		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R1*L*sin(h1), L+R1*L*cos(h1), 0.0f));
-		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R2*L*sin(h2), L+R2*L*cos(h2), 0.0f));
+		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R1*L*sin(h1)+windx, L+R1*L*cos(h1)+windy, windz));
+		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R2*L*sin(h2)+windx, L+R2*L*cos(h2)+windy, windz));
 	glPopMatrix();
 	for (int i = 1; i <= level; i++) {
 		queue<Branch> temp;
@@ -107,17 +132,17 @@ void drawGMT1() {
 			branches.pop();
 			float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
 			float S = sqrt(u*u + w*w), T = sqrt(u*u + w*w + v*v);
-			float dx = R1*(u*cos(h1) - (T / S)*w*sin(h1));
-			float dy = R1*v*cos(h1);
-			float dz = R1*(w*cos(h1) + (T / S)*u*sin(h1));
+			float dx = R1*(u*cos(h1) - (T / S)*w*sin(h1))+windx;
+			float dy = R1*v*cos(h1)+windy;
+			float dz = R1*(w*cos(h1) + (T / S)*u*sin(h1))+windz;
 			glPushMatrix();
 				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
 				drawBranch(mother.radius,u, v, w);
 			glPopMatrix();
 			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + dx, mother.yEnd + dy, mother.zEnd + dz));
-			dx = R2*(u*cos(h2) - (T / S)*w*sin(h2));
-			dy = R2*v*cos(h2);
-			dz = R2*(w*cos(h2) + (T / S)*u*sin(h2));
+			dx = R2*(u*cos(h2) - (T / S)*w*sin(h2))+windx;
+			dy = R2*v*cos(h2)+windy;
+			dz = R2*(w*cos(h2) + (T / S)*u*sin(h2))+windz;
 			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + dx, mother.yEnd + dy, mother.zEnd + dz));
 		}
 		while (!temp.empty()){
