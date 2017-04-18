@@ -119,7 +119,7 @@ void drawGMT1() {
 		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R1*L*sin(h1) + windx, L + R1*L*cos(h1) + windy, windz));
 	glPopMatrix();
 	float H1 = h1;
-	for (int i = 1; i <= level; i++) {
+	for (int i = 1; i < level; i++) {
 		queue<Branch> temp;
 		if (h2 == 0) {
 			//MONOPODIAL CASE FOR GENERATING CHILD BRANCHES OF AXIAL BRANCH:-
@@ -158,6 +158,15 @@ void drawGMT1() {
 			branches.push(temp.front());
 			temp.pop();
 		}
+	}
+	while (!branches.empty()) {
+		Branch mother = branches.front();
+		branches.pop();
+		float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
+		glPushMatrix();
+			glTranslatef(mother.xStart, mother.yStart, mother.zStart);
+			drawBranch(mother.radius, u, v, w);
+		glPopMatrix();
 	}
 }
 
