@@ -10,7 +10,7 @@ GLint windowWidth = 1280;                    // Width of our window
 GLint windowHeight = 720;                    // Height of our window
 
 //Tree Parameters:-
-float h1=25.0f, h2=-10.0f;	//branching angles (for monopodial, h2=0)
+float h1=70.0f, h2=0.0f;	//branching angles (for monopodial, h2=0)
 float R1=0.7f, R2=0.9f;		//contraction ratios
 float divergence = 140.0;				//divergence angle
 float R=0.15f, L=6.0f;		//Radius and length of the trunk
@@ -94,6 +94,16 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		windz = windz - 0.05f;
 		glutPostRedisplay();
 		break;
+	case 'd':
+		divergence = divergence + 20;
+		cout << divergence << endl;
+		glutPostRedisplay();
+		break;
+	case 'D':
+		divergence = divergence - 20;
+		cout << divergence << endl;
+		glutPostRedisplay();
+		break;
 	default:
 		break;
 	}
@@ -110,7 +120,7 @@ void drawBranch(float radius,float x, float y, float z) {
 }
 
 //to push children of a mother branch into the queue, after applying appropriate transformations
-void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont) {
+void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont,int level) {
 	float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
 	float length = sqrt(u*u + v*v + w*w);
 	float phi = atan2(u, w) * 180 / 3.14f;
@@ -120,7 +130,7 @@ void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont) 
 		glLoadIdentity();
 		glRotatef((GLfloat)phi, 0.0, 1.0, 0.0);
 		glRotatef((GLfloat)(-theta), 1.0, 0.0, 0.0);
-		glRotatef((GLfloat)divergence, 0.0, 0.0, 1.0);
+		glRotatef((GLfloat)divergence*level, 0.0, 0.0, 1.0);
 		glRotatef((GLfloat)(angle), 0.0f, 1.0f, 0.0f);
 		glGetFloatv(GL_MODELVIEW_MATRIX, mv);
 	glPopMatrix();
@@ -148,7 +158,8 @@ void drawGMT1() {
 		queue<Branch> temp;
 		if (h2 == 0) {
 			//MONOPODIAL CASE FOR GENERATING CHILD BRANCHES OF AXIAL BRANCH:-
-			H1 = -H1;	//Alternate the sign of the banching angles
+			//if(divergence==0)
+				H1 = -H1;	//Alternate the sign of the banching angles
 			Branch mother = branches.front();	
 			branches.pop();
 			float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
@@ -157,7 +168,7 @@ void drawGMT1() {
 				drawBranch(mother.radius, u, v, w);
 			glPopMatrix();
 			temp.push(Branch(R2*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + windx, mother.yEnd + windy + R2*v, mother.zEnd + windz));
-			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, R1*v*sin(H1) + windx + mother.xEnd, mother.yEnd + R1*v*cos(H1) + windy, mother.zEnd + windz));
+			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, R1*v*sin(h1*3.14/180.0)*cos(divergence*i*3.14/180.0) + windx + mother.xEnd, mother.yEnd + R1*v*cos(h1*3.14/180.0) + windy, -R1*v*sin(H1*i*3.14/180.0)*sin(divergence*3.14/180.0)+mother.zEnd + windz));
 		}
 		while (!branches.empty()){
 			Branch mother = branches.front();
@@ -167,8 +178,8 @@ void drawGMT1() {
 				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
 				drawBranch(mother.radius,u, v, w);
 			glPopMatrix();
-			pushChild(temp, mother, h2, R2);
-			pushChild(temp, mother, h1, R1);
+			pushChild(temp, mother, h2, R2,0);
+			pushChild(temp, mother, H1, R1,0);
 		}
 		while (!temp.empty()){
 			branches.push(temp.front());
