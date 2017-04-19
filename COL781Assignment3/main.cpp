@@ -10,9 +10,9 @@ GLint windowWidth = 1280;                    // Width of our window
 GLint windowHeight = 720;                    // Height of our window
 
 //Tree Parameters:-
-float h1=70.0f, h2=0.0f;	//branching angles (for monopodial, h2=0)
+float h1=25.0f, h2=0.0f;	//branching angles (for monopodial, h2=0)
 float R1=0.7f, R2=0.9f;		//contraction ratios
-float divergence = 140.0;				//divergence angle
+float divergence = 0.0f;				//divergence angle
 float R=0.15f, L=6.0f;		//Radius and length of the trunk
 int level = 9;				//number of growth levels
 float windx = 0.0f, windy = 0.0f, windz = 0.0f;	//wind direction
@@ -159,7 +159,7 @@ void drawGMT1() {
 		if (h2 == 0) {
 			//MONOPODIAL CASE FOR GENERATING CHILD BRANCHES OF AXIAL BRANCH:-
 			//if(divergence==0)
-				H1 = -H1;	//Alternate the sign of the banching angles
+			H1 = -H1;	//Alternate the sign of the branching angles
 			Branch mother = branches.front();	
 			branches.pop();
 			float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
@@ -168,7 +168,7 @@ void drawGMT1() {
 				drawBranch(mother.radius, u, v, w);
 			glPopMatrix();
 			temp.push(Branch(R2*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + windx, mother.yEnd + windy + R2*v, mother.zEnd + windz));
-			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, R1*v*sin(h1*3.14/180.0)*cos(divergence*i*3.14/180.0) + windx + mother.xEnd, mother.yEnd + R1*v*cos(h1*3.14/180.0) + windy, -R1*v*sin(H1*i*3.14/180.0)*sin(divergence*3.14/180.0)+mother.zEnd + windz));
+			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, R1*v*sin(H1*3.14/180.0)*cos(divergence*i*3.14/180.0) + windx + mother.xEnd, mother.yEnd + R1*v*cos(H1*3.14/180.0) + windy, -R1*v*sin(H1*i*3.14/180.0)*sin(divergence*3.14/180.0)+mother.zEnd + windz));
 		}
 		while (!branches.empty()){
 			Branch mother = branches.front();
