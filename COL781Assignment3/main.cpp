@@ -42,7 +42,7 @@ struct Branch {
 	float zEnd;
 };
 
-void drawLeaf(void);
+void drawLeaf(float x, float y, float z);
 
 //update the cursor positions:-
 void update(int x, int y) {
@@ -186,15 +186,24 @@ void drawGMT1() {
 			temp.pop();
 		}
 	}
+	//Color declarations
+	GLfloat white[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat green[] = { 0.1, 0.9, 0.1, 1.0 };
+	GLfloat brown[] = { 0.4f, 0.2f, 0.0f, 1.0 };
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
 	while (!branches.empty()) {
 		Branch mother = branches.front();
 		branches.pop();
 		float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
 		glPushMatrix();
 			glTranslatef(mother.xStart, mother.yStart, mother.zStart);
-			drawBranch(mother.radius, u, v, w);
+			/*drawBranch(mother.radius, u, v, w);*/
+			drawLeaf(u,v,w);
 		glPopMatrix();
 	}
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
+	/*glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);*/
 }
 
 void display() {
@@ -206,7 +215,6 @@ void display() {
 		glTranslatef(0.0f, yPos, 0.0f);
 		glScalef(0.15f, 0.15f, 0.15f);
 		drawGMT1();
-		//drawLeaf();
 	glPopMatrix();
 
 	glutSwapBuffers();
@@ -236,7 +244,7 @@ void init() {
 	GLfloat white[] = { 1.0, 1.0, 1.0, 1.0 };
 	GLfloat direction[] = { 1.0, 1.0, 1.0, 0.0 };
 
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, white);
 	glMaterialf(GL_FRONT, GL_SHININESS, 30);
 
@@ -281,8 +289,15 @@ int main(int argc, char** argv) {
 	return 0;//unreachable return statement :P
 }
 
-void drawLeaf(void) {
-	glColor3f(0.1, 0.9, 0.1);
+void drawLeaf(float x, float y, float z) {
+	float r = sqrt(x*x + y*y + z*z);
+	float phi = atan2(x, z) * 180 / 3.14f;
+	float theta = asin(y / r) * 180 / 3.14f;
+	glRotatef((GLfloat)phi, 0.0, 1.0, 0.0);
+	glRotatef((GLfloat)(-theta), 1.0, 0.0, 0.0);
+	glRotatef((GLfloat)(90),1.0,0.0,0.0);
+	glScalef(r/4.0, r/4.0, r/4.0);
+
 	glBegin(GL_POLYGON);
 	glVertex2f(0.0, 0.0);
 	glVertex2f(1.0, 0.7);
