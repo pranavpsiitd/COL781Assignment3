@@ -10,9 +10,9 @@ GLint windowWidth = 1280;                    // Width of our window
 GLint windowHeight = 720;                    // Height of our window
 
 //Tree Parameters:-
-float h1=(float)(25.0*(3.14/180.0)), h2=(float)(0.0f*(3.14/180.0));	//branching angles (for monopodial, h2=0)
+float h1=25.0f, h2=-10.0f;	//branching angles (for monopodial, h2=0)
 float R1=0.7f, R2=0.9f;		//contraction ratios
-float divergence = 0.0;				//divergence angle
+float divergence = 140.0;				//divergence angle
 float R=0.15f, L=6.0f;		//Radius and length of the trunk
 int level = 9;				//number of growth levels
 float windx = 0.0f, windy = 0.0f, windz = 0.0f;	//wind direction
@@ -109,14 +109,39 @@ void drawBranch(float radius,float x, float y, float z) {
 	glutSolidCylinder(radius, r, 20, 20);
 }
 
+//to push children of a mother branch into the queue, after applying appropriate transformations
+void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont) {
+	float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
+	float length = sqrt(u*u + v*v + w*w);
+	float phi = atan2(u, w) * 180 / 3.14f;
+	float theta = asin(v / length) * 180 / 3.14f;
+	float mv[16];
+	glPushMatrix();
+		glLoadIdentity();
+		glRotatef((GLfloat)phi, 0.0, 1.0, 0.0);
+		glRotatef((GLfloat)(-theta), 1.0, 0.0, 0.0);
+		glRotatef((GLfloat)divergence, 0.0, 0.0, 1.0);
+		glRotatef((GLfloat)(angle), 0.0f, 1.0f, 0.0f);
+		glGetFloatv(GL_MODELVIEW_MATRIX, mv);
+	glPopMatrix();
+	float xp = mv[8] * cont*length + mv[12];
+	float yp = mv[9] * cont*length + mv[13];
+	float zp = mv[10] * cont*length + mv[14];
+	float wp = mv[11] * cont*length + mv[15];
+	xp /= wp;
+	yp /= wp;
+	zp /= wp;
+	branches.push(Branch(cont*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + xp + windx, mother.yEnd + yp + windy, mother.zEnd + zp + windz));
+}
+
 //for drawing GMT1 model of tree using the given parameters
 void drawGMT1() {
 	queue<Branch> branches;
 	glPushMatrix();
 		drawBranch(R, 0.0f, L, 0.0f);	//main trunk
 		//seeding the first two child branches:-
-		branches.push(Branch(R2*R, 0.0f, L, 0.0f, R2*L*sin(h2) + windx, L + R2*L*cos(h2) + windy, windz));
-		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R1*L*sin(h1) + windx, L + R1*L*cos(h1) + windy, windz));
+		branches.push(Branch(R2*R, 0.0f, L, 0.0f, R2*L*sin(h2*3.14/180.0) + windx, L + R2*L*cos(h2*3.14 / 180.0) + windy, windz));
+		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R1*L*sin(h1*3.14 / 180.0) + windx, L + R1*L*cos(h1*3.14 / 180.0) + windy, windz));
 	glPopMatrix();
 	float H1 = h1;
 	for (int i = 1; i < level; i++) {
@@ -142,17 +167,8 @@ void drawGMT1() {
 				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
 				drawBranch(mother.radius,u, v, w);
 			glPopMatrix();
-			//child branches are in a plane perpendicular to the plane of mother branch and down vector
-			float S = sqrt(u*u + w*w), T = sqrt(u*u + w*w + v*v);
-			float dx = R1*(u*cos(H1) - (T / S)*w*sin(H1)) + windx;
-			float dy = R1*v*cos(H1) + windy;
-			float dz = R1*(w*cos(H1) + (T / S)*u*sin(H1)) + windz;
-			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + dx, mother.yEnd + dy, mother.zEnd + dz));
-			dx = R2*(u*cos(h2) - (T / S)*w*sin(h2)) + windx;
-			dy = R2*v*cos(h2) + windy;
-			dz = R2*(w*cos(h2) + (T / S)*u*sin(h2)) + windz;
-			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + dx, mother.yEnd + dy, mother.zEnd + dz));
-			
+			pushChild(temp, mother, h2, R2);
+			pushChild(temp, mother, h1, R1);
 		}
 		while (!temp.empty()){
 			branches.push(temp.front());
@@ -179,7 +195,7 @@ void display() {
 		glTranslatef(0.0f, yPos, 0.0f);
 		glScalef(0.15f, 0.15f, 0.15f);
 		drawGMT1();
-		drawLeaf();
+		//drawLeaf();
 	glPopMatrix();
 
 	glutSwapBuffers();
