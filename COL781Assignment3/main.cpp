@@ -10,20 +10,22 @@ GLint windowWidth = 1280;                    // Width of our window
 GLint windowHeight = 720;                    // Height of our window
 
 //Tree Parameters:-
-float h1=70.0f, h2=0.0f;	//branching angles (for monopodial, h2=0)
+float h1=45.0f, h2=0.0f;	//branching angles (for monopodial, h2=0)
 float R1=0.7f, R2=0.9f;		//contraction ratios
-float divergence = 0.0f;				//divergence angle
+float divergence = 140.0f;				//divergence angle
 float R=0.15f, L=6.0f;		//Radius and length of the trunk
 int level = 9;				//number of growth levels
-float windx = 0.0f, windy = 0.0f, windz = 0.0f;	//wind direction
-
-
-//cursor position:-
-int xpos, ypos;
 
 //rendering parameters:-
 float angle = 0.0f;
 float yPos = 0.0f;
+
+//Color declarations:-
+GLfloat white[] = { 1.0, 1.0, 1.0, 1.0 };
+GLfloat green[] = { 0.1f, 0.9f, 0.1f, 1.0 };
+GLfloat brown[] = { 0.4f, 0.2f, 0.0f, 1.0 };
+GLfloat red[] = { 1.0f,0.0f,0.0f,1.0 };
+GLfloat blue[] = { 0.0,0.0,1.0,1.0 };
 
 //struct to store co-ordinates of a branch
 struct Branch {
@@ -42,13 +44,28 @@ struct Branch {
 	float zEnd;
 };
 
-void drawLeaf(float x, float y, float z);
+//struct to store co-ordinates of an attractore or inhibitor:-
+struct Point {
+	Point(float xPos, float yPos, float zPos, float f)
+		:x(xPos), y(yPos), z(zPos), factor(f) {
+	}
 
-//update the cursor positions:-
-void update(int x, int y) {
-	xpos = x;
-	ypos = y;
-}
+	~Point() {}
+
+	float x;
+	float y;
+	float z;
+	float factor;
+};
+
+
+//Environment parameters:-
+float windx = 0.0f, windy = 0.0f, windz = 0.0f;	//wind direction
+vector<Point> attractors;	//list of attractors
+vector<Point> inhibitors;	//list of inhibitors
+int ai = 0, ii = 0;
+
+void drawLeaf(float x, float y, float z);
 
 // Function to set flags according to which keys are pressed or released
 void handleKeypressUp(unsigned char theKey, int x, int y){
@@ -104,6 +121,59 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		cout << divergence << endl;
 		glutPostRedisplay();
 		break;
+	case '+':
+		level = level + 1;
+		glutPostRedisplay();
+		break;
+	case '-':
+		level--;
+		glutPostRedisplay();
+		break;
+	case 'n':
+		cout << "Enter co-ordinates of attractor" << endl;
+		float x1, y1, z1, f1;
+		cin >> x1 >> y1 >> z1 >> f1;
+		attractors.push_back(Point(x1, y1, z1, f1));
+		glutPostRedisplay();
+		break;
+	case 'N':
+		cout << "Enter co-ordinates of inhibitor" << endl;
+		cin >> x1 >> y1 >> z1 >> f1;
+		inhibitors.push_back(Point(x1, y1, z1, f1));
+		glutPostRedisplay();
+		break;
+	case 'c':
+		cout << "Enter index of attractor" << endl;
+		cin >> ai;
+		break;
+	case 'C':
+		cout << "Enter index of inhibitor" << endl;
+		cin >> ii;
+		break;
+	case '1':
+		if (ai >= 0 && ai < attractors.size()) {
+			attractors[ai].x += 0.5f;
+			glutPostRedisplay();
+		}
+		else
+			cout << "This index does not exist" << endl;
+		break;
+	case '2':
+		if (ai >= 0 && ai < attractors.size()) {
+			attractors[ai].y += 0.5f;
+			glutPostRedisplay();
+		}
+		else
+			cout << "This index does not exist" << endl;
+		break;
+	case '3':
+		if (ai >= 0 && ai < attractors.size()) {
+			attractors[ai].z += 0.5f;
+			glutPostRedisplay();
+		}
+		else
+			cout << "This index does not exist" << endl;
+		break;
 	default:
 		break;
 	}
@@ -116,7 +186,29 @@ void drawBranch(float radius,float x, float y, float z) {
 	float theta = asin(y / r)*180/3.14f;
 	glRotatef((GLfloat)phi, 0.0, 1.0, 0.0);
 	glRotatef((GLfloat)(-theta), 1.0, 0.0, 0.0);
-	glutSolidCylinder(radius, r, 20, 20);
+	glutSolidCylinder(radius, r, 5, 5);
+}
+
+//For uniform and non-uniform deformations of a branch
+Point deform(float x, float y, float z) {
+	float incx = 0.0f, incy = 0.0f, incz = 0.0f;
+	//attractors:-
+	for (int i = 0; i < attractors.size(); i++) {
+		float dx = attractors[i].x - x, dy = attractors[i].y - y, dz = attractors[i].z - z;
+		float factor = attractors[i].factor / sqrt(dx*dx + dy*dy + dz*dz);
+		incx += factor*dx;
+		incy += factor*dy;
+		incz += factor*dz;
+	}
+	//inhibitors:-
+	for (int i = 0; i < inhibitors.size(); i++) {
+		float dx = inhibitors[i].x - x, dy = inhibitors[i].y - y, dz = inhibitors[i].z - z;
+		float factor = inhibitors[i].factor / sqrt(dx*dx + dy*dy + dz*dz);
+		incx -= factor*dx;
+		incy -= factor*dy;
+		incz -= factor*dz;
+	}
+	return Point(x + incx + windx, y + incy + windy, z + incz + windz, 0.0);
 }
 
 //to push children of a mother branch into the queue, after applying appropriate transformations
@@ -141,7 +233,8 @@ void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont,i
 	xp /= wp;
 	yp /= wp;
 	zp /= wp;
-	branches.push(Branch(cont*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + xp + windx, mother.yEnd + yp + windy, mother.zEnd + zp + windz));
+	Point p = deform(xp, yp, zp);
+	branches.push(Branch(cont*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + p.x , mother.yEnd + p.y, mother.zEnd + p.z ));
 }
 
 //for drawing GMT1 model of tree using the given parameters
@@ -150,8 +243,10 @@ void drawGMT1() {
 	glPushMatrix();
 		drawBranch(R, 0.0f, L, 0.0f);	//main trunk
 		//seeding the first two child branches:-
-		branches.push(Branch(R2*R, 0.0f, L, 0.0f, R2*L*sin(h2*3.14/180.0) + windx, L + R2*L*cos(h2*3.14 / 180.0) + windy, windz));
-		branches.push(Branch(R1*R, 0.0f, L, 0.0f, R1*L*sin(h1*3.14 / 180.0) + windx, L + R1*L*cos(h1*3.14 / 180.0) + windy, windz));
+		Point p = deform(R2*L*sin(h2*3.14 / 180.0), L + R2*L*cos(h2*3.14 / 180.0), 0.0);
+		branches.push(Branch(R2*R, 0.0f, L, 0.0f, p.x, p.y, p.z));
+		p = deform(R1*L*sin(h1*3.14 / 180.0), L + R1*L*cos(h1*3.14 / 180.0), 0.0);
+		branches.push(Branch(R1*R, 0.0f, L, 0.0f, p.x, p.y, p.z));
 	glPopMatrix();
 	float H1 = h1;
 	for (int i = 1; i < level; i++) {
@@ -166,11 +261,16 @@ void drawGMT1() {
 				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
 				drawBranch(mother.radius, u, v, w);
 			glPopMatrix();
-			temp.push(Branch(R2*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + windx, mother.yEnd + windy + R2*v, mother.zEnd + windz));
-			if(divergence==0)
-				temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, R1*v*sin(H1*3.14/180.0) + windx + mother.xEnd, mother.yEnd + R1*v*cos(H1*3.14/180.0) + windy, mother.zEnd + windz));
-			else
-				temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, R1*v*sin(h1*3.14 / 180.0)*cos(divergence*i*3.14 / 180.0) + windx + mother.xEnd, mother.yEnd + R1*v*cos(h1*3.14 / 180.0) + windy, -R1*v*sin(H1*i*3.14 / 180.0)*sin(divergence*3.14 / 180.0) + mother.zEnd + windz));
+			p = deform(mother.xEnd, mother.yEnd + R2*v, mother.zEnd);
+			temp.push(Branch(R2*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
+			if (divergence == 0) {
+				p = deform(R1*v*sin(H1*3.14 / 180.0) + mother.xEnd, mother.yEnd + R1*v*cos(H1*3.14 / 180.0), mother.zEnd);
+				temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
+			}
+			else {
+				p = deform(R1*v*sin(h1*3.14 / 180.0)*cos(divergence*i*3.14 / 180.0) + mother.xEnd, mother.yEnd + R1*v*cos(h1*3.14 / 180.0), -R1*v*sin(H1*i*3.14 / 180.0)*sin(divergence*3.14 / 180.0) + mother.zEnd);
+				temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
+			}
 		}
 		while (!branches.empty()){
 			Branch mother = branches.front();
@@ -180,20 +280,16 @@ void drawGMT1() {
 				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
 				drawBranch(mother.radius,u, v, w);
 			glPopMatrix();
-			pushChild(temp, mother, h2, R2,0);
-			pushChild(temp, mother, H1, R1,0);
+			pushChild(temp, mother, h2, R2, 0);
+			pushChild(temp, mother, H1, R1, 0);
 		}
 		while (!temp.empty()){
 			branches.push(temp.front());
 			temp.pop();
 		}
 	}
-	//Color declarations
-	GLfloat white[] = { 1.0, 1.0, 1.0, 1.0 };
-	GLfloat green[] = { 0.1, 0.9, 0.1, 1.0 };
-	GLfloat brown[] = { 0.4f, 0.2f, 0.0f, 1.0 };
 
-	/*glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
 	while (!branches.empty()) {
 		Branch mother = branches.front();
 		branches.pop();
@@ -204,8 +300,22 @@ void drawGMT1() {
 			drawLeaf(u,v,w);
 		glPopMatrix();
 	}
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);*/
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, blue);
+	for (int i = 0; i < attractors.size(); i++) {
+		glPushMatrix();
+			glTranslatef(attractors[i].x, attractors[i].y, attractors[i].z);
+			glutSolidSphere(1.0f, 10, 10);
+		glPopMatrix();
+	}
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, red);
+	for (int i = 0; i < inhibitors.size(); i++) {
+		glPushMatrix();
+			glTranslatef(inhibitors[i].x, inhibitors[i].y, inhibitors[i].z);
+			glutSolidSphere(1.0f, 10, 10);
+		glPopMatrix();
+	}
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
+	//glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
 }
 
 void display() {
@@ -241,18 +351,16 @@ void reshape(GLint w, GLint h) {
 
 void init() {
 	GLfloat black[] = { 0.0, 0.0, 0.0, 1.0 };
-	GLfloat yellow[] = { 1.0, 1.0, 0.0, 1.0 };
-	GLfloat brown[] = { 0.4f, 0.2f, 0.0f, 1.0 };
 	GLfloat white[] = { 1.0, 1.0, 1.0, 1.0 };
 	GLfloat direction[] = { 1.0, 1.0, 1.0, 0.0 };
 
 	//glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
-	glMaterialfv(GL_FRONT, GL_SPECULAR, white);
-	glMaterialf(GL_FRONT, GL_SHININESS, 30);
+	//glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+	//glMaterialf(GL_FRONT, GL_SHININESS, 30);
 
 	glLightfv(GL_LIGHT0, GL_AMBIENT, black);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, white);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, white);
+	//glLightfv(GL_LIGHT0, GL_SPECULAR, white);
 	glLightfv(GL_LIGHT0, GL_POSITION, direction);
 
 	glEnable(GL_LIGHTING);                // so the renderer considers light
