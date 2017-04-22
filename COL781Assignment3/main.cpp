@@ -3,8 +3,14 @@
 #include <iostream>
 #include <cmath>
 #include <queue>
+#include <random>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
+
+//MACROS
+#define epsilon 0.001
 
 GLint windowWidth = 1280;                    // Width of our window
 GLint windowHeight = 720;                    // Height of our window
@@ -26,6 +32,49 @@ GLfloat green[] = { 0.1f, 0.9f, 0.1f, 1.0 };
 GLfloat brown[] = { 0.4f, 0.2f, 0.0f, 1.0 };
 GLfloat red[] = { 1.0f,0.0f,0.0f,1.0 };
 GLfloat blue[] = { 0.0,0.0,1.0,1.0 };
+
+struct animation_parameters {
+	float windx;
+	float windy; 
+	float windz;
+};
+
+//random number generator
+default_random_engine generator;
+normal_distribution<double> distribution(0.0, 0.03);
+
+//Multiple Frogs
+int numTrees = 0;
+
+struct tree {
+	int START_FRAME;
+	int END_FRAME;
+	float FPS;
+	int TOTAL_FRAMES;
+
+	vector<animation_parameters> keyFrames;
+
+	float windx;
+	float windy;
+	float windz;
+
+	float xPos, zPos;
+	float h1, h2;	    //branching angles (for monopodial, h2=0)
+	float R1, R2;		//contraction ratios
+	float divergence;	//divergence angle
+	float R, L;		    //Radius and length of the trunk
+	int level;			//number of growth levels
+
+	//global variables
+	int startTime;
+	int elapsedTime;
+	int prevTime;
+	int currentFrame;
+	float t_interpolation;
+
+};
+
+vector<tree> trees;
 
 //struct to store co-ordinates of a branch
 struct Branch {
@@ -60,12 +109,16 @@ struct Point {
 
 
 //Environment parameters:-
-float windx = 0.0f, windy = 0.0f, windz = 0.0f;	//wind direction
+float windx_mean = 0.0f, windy_mean = 0.0f, windz_mean = 0.0f;	//wind direction
 vector<Point> attractors;	//list of attractors
 vector<Point> inhibitors;	//list of inhibitors
 int ai = 0, ii = 0;
 
+//function declarations
 void drawLeaf(float x, float y, float z);
+void animate();
+float lerp(float x, float y, float t);
+void readKeyFrames(tree& tree);
 
 // Function to set flags according to which keys are pressed or released
 void handleKeypressUp(unsigned char theKey, int x, int y){
@@ -88,27 +141,27 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		glutPostRedisplay();
 		break;
 	case 'x':
-		windx = windx + 0.05f;
+		windx_mean = windx_mean + 0.05f;
 		glutPostRedisplay();
 		break;
 	case 'X':
-		windx = windx - 0.05f;
+		windx_mean = windx_mean - 0.05f;
 		glutPostRedisplay();
 		break;
 	case 'y':
-		windy = windy + 0.05f;
+		windy_mean = windy_mean + 0.05f;
 		glutPostRedisplay();
 		break;
 	case 'Y':
-		windy = windy - 0.05f;
+		windy_mean = windy_mean - 0.05f;
 		glutPostRedisplay();
 		break;
 	case 'z':
-		windz = windz + 0.05f;
+		windz_mean = windz_mean + 0.05f;
 		glutPostRedisplay();
 		break;
 	case 'Z':
-		windz = windz - 0.05f;
+		windz_mean = windz_mean - 0.05f;
 		glutPostRedisplay();
 		break;
 	case 'd':
@@ -174,6 +227,61 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		else
 			cout << "This index does not exist" << endl;
 		break;
+	case 'l':
+	{
+		trees.push_back(tree());
+		numTrees++;
+		tree& tree = trees[numTrees - 1];
+		//initialize tree
+		tree.START_FRAME = 0;
+		tree.END_FRAME = 0;//Updated in readFrames
+		tree.FPS = 100.0f;
+		tree.TOTAL_FRAMES = 100.0f;
+
+		//Make this read from a file
+		/*ifstream infile;
+		infile.open("tree" + numTrees + ".txt");
+
+		std::string line;
+		
+		getline(infile, line);
+		istringstream iss(line);
+
+		iss >> tree.xPos
+			>> tree.zPos
+			>> tree.h1
+			>> tree.h2
+			>> tree.R1
+			>> tree.R2
+			>> tree.divergence
+			>> tree.R
+			>> tree.L
+			>> tree.level;
+
+		infile.close();*/
+
+		tree.xPos = 0.0f;
+		tree.zPos = 0.0f;
+		tree.h1 = 45.0f; 
+		tree.h2 = 0.0f;
+		tree.R1 = 0.7f; 
+		tree.R2 = 0.9f;
+		tree.divergence = 140.0f;	
+		tree.R = 0.15f; 
+		tree.L = 6.0f;
+		tree.level = 9;
+	
+		
+		//initialization end
+
+		tree.currentFrame = tree.START_FRAME;
+		readKeyFrames(tree);
+		tree.startTime = glutGet(GLUT_ELAPSED_TIME);
+	}
+	break;
+	case 32://Space bar start animation
+		glutIdleFunc(animate);//register idle callback
+		break;
 	default:
 		break;
 	}
@@ -208,7 +316,7 @@ Point deform(float x, float y, float z) {
 		incy -= factor*dy;
 		incz -= factor*dz;
 	}
-	return Point(x + incx + windx, y + incy + windy, z + incz + windz, 0.0);
+	return Point(x + incx + windx_mean + trees[0].windx, y + incy + windy_mean + trees[0].windy, z + incz + trees[0].windz + windz_mean, 0.0);
 }
 
 //to push children of a mother branch into the queue, after applying appropriate transformations
@@ -322,13 +430,14 @@ void display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);
 	
-	glPushMatrix();
-		glRotatef((GLfloat)angle, 0.0f, 1.0f, 0.0f);
-		glTranslatef(0.0f, yPos, 0.0f);
-		glScalef(0.15f, 0.15f, 0.15f);
-		drawGMT1();
-	glPopMatrix();
-
+	for (int i = 0; i < trees.size(); i++) {
+		glPushMatrix();
+			glRotatef((GLfloat)angle, 0.0f, 1.0f, 0.0f);
+			glTranslatef(trees[i].xPos, yPos, trees[i].zPos);
+			glScalef(0.15f, 0.15f, 0.15f);
+			drawGMT1();
+		glPopMatrix();
+	}
 	glutSwapBuffers();
 }
 
@@ -418,4 +527,76 @@ void drawLeaf(float x, float y, float z) {
 	glVertex2f(-1.3, 1.8);
 	glVertex2f(-1.0, 0.7);
 	glEnd();
+}
+
+void animate() {
+	for (int indexTree = 0; indexTree < trees.size(); indexTree++) {
+		struct tree& tree = trees[indexTree];
+
+		tree.elapsedTime = glutGet(GLUT_ELAPSED_TIME);
+		//Sleep(max(0, 17 - (frog.elapsedTime - frog.prevTime)));
+		tree.prevTime = tree.elapsedTime;
+		tree.elapsedTime = glutGet(GLUT_ELAPSED_TIME);
+		
+		
+		int currentFrame = tree.currentFrame;
+		int next_frame = currentFrame + 1;
+		//tree.FPS = abs((20.0f/0.2f)*(1.0f/3.0f)*(tree.keyFrames[next_frame].windx - tree.keyFrames[currentFrame].windx + tree.keyFrames[next_frame].windy - tree.keyFrames[currentFrame].windy + tree.keyFrames[next_frame].windz - tree.keyFrames[currentFrame].windz));
+		tree.t_interpolation = ((tree.elapsedTime - tree.startTime)*(tree.FPS)) / (1000.0f * tree.TOTAL_FRAMES);
+		float t_interpolation = tree.t_interpolation;
+
+		vector<animation_parameters>& keyFrames = tree.keyFrames;
+		//Interpolate all the parameters of the model
+		tree.windx= lerp(keyFrames[currentFrame].windx, keyFrames[next_frame].windx, t_interpolation);
+		tree.windy = lerp(keyFrames[currentFrame].windy, keyFrames[next_frame].windy, t_interpolation);
+		tree.windz = lerp(keyFrames[currentFrame].windz, keyFrames[next_frame].windz, t_interpolation);
+
+		if (t_interpolation > 1.0f - epsilon) {
+			tree.currentFrame++;
+			if (tree.currentFrame == tree.END_FRAME - 1) {
+				tree.currentFrame = tree.START_FRAME;
+				readKeyFrames(tree);
+				tree.startTime = glutGet(GLUT_ELAPSED_TIME);
+				tree.TOTAL_FRAMES = 10.0f;
+			}
+			tree.startTime = glutGet(GLUT_ELAPSED_TIME);
+		}
+	}
+	glutPostRedisplay();
+}
+
+void readKeyFrames(tree& tree) {
+	vector<animation_parameters>& keyFrames = tree.keyFrames;
+	
+	keyFrames.clear();
+	
+	tree.END_FRAME = 100;
+
+	keyFrames.push_back(animation_parameters());
+	keyFrames[0].windx = 0;
+	keyFrames[0].windy = 0;
+	keyFrames[0].windz = 0;
+
+	for (int i = 1; i < tree.END_FRAME; i++)
+	{
+		keyFrames.push_back(animation_parameters());
+
+		keyFrames[i].windx = distribution(generator);
+		while(abs(keyFrames[i].windx ) > 0.03)
+			keyFrames[i].windx = distribution(generator);
+		/*while (abs(keyFrames[i].windy - keyFrames[i - 1].windy) > 0.1)
+			keyFrames[i].windy = distribution(generator);*/
+		keyFrames[i].windy = 0.0f;
+
+		keyFrames[i].windz = distribution(generator);
+		while (abs(keyFrames[i].windz) > 0.03)
+			keyFrames[i].windz = distribution(generator);
+
+	}
+}
+
+float lerp(float x, float y, float t) {
+	if (t > 1 - epsilon)
+		t = 1.0f;
+	return x + t*(y - x);
 }
