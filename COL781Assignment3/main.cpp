@@ -10,7 +10,7 @@ GLint windowWidth = 1280;                    // Width of our window
 GLint windowHeight = 720;                    // Height of our window
 
 //Tree Parameters:-
-float h1=25.0f, h2=0.0f;	//branching angles (for monopodial, h2=0)
+float h1=70.0f, h2=0.0f;	//branching angles (for monopodial, h2=0)
 float R1=0.7f, R2=0.9f;		//contraction ratios
 float divergence = 0.0f;				//divergence angle
 float R=0.15f, L=6.0f;		//Radius and length of the trunk
@@ -158,7 +158,6 @@ void drawGMT1() {
 		queue<Branch> temp;
 		if (h2 == 0) {
 			//MONOPODIAL CASE FOR GENERATING CHILD BRANCHES OF AXIAL BRANCH:-
-			//if(divergence==0)
 			H1 = -H1;	//Alternate the sign of the branching angles
 			Branch mother = branches.front();	
 			branches.pop();
@@ -168,7 +167,10 @@ void drawGMT1() {
 				drawBranch(mother.radius, u, v, w);
 			glPopMatrix();
 			temp.push(Branch(R2*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + windx, mother.yEnd + windy + R2*v, mother.zEnd + windz));
-			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, R1*v*sin(H1*3.14/180.0)*cos(divergence*i*3.14/180.0) + windx + mother.xEnd, mother.yEnd + R1*v*cos(H1*3.14/180.0) + windy, -R1*v*sin(H1*i*3.14/180.0)*sin(divergence*3.14/180.0)+mother.zEnd + windz));
+			if(divergence==0)
+				temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, R1*v*sin(H1*3.14/180.0) + windx + mother.xEnd, mother.yEnd + R1*v*cos(H1*3.14/180.0) + windy, mother.zEnd + windz));
+			else
+				temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, R1*v*sin(h1*3.14 / 180.0)*cos(divergence*i*3.14 / 180.0) + windx + mother.xEnd, mother.yEnd + R1*v*cos(h1*3.14 / 180.0) + windy, -R1*v*sin(H1*i*3.14 / 180.0)*sin(divergence*3.14 / 180.0) + mother.zEnd + windz));
 		}
 		while (!branches.empty()){
 			Branch mother = branches.front();
@@ -191,19 +193,19 @@ void drawGMT1() {
 	GLfloat green[] = { 0.1, 0.9, 0.1, 1.0 };
 	GLfloat brown[] = { 0.4f, 0.2f, 0.0f, 1.0 };
 
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
+	/*glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
 	while (!branches.empty()) {
 		Branch mother = branches.front();
 		branches.pop();
 		float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
 		glPushMatrix();
 			glTranslatef(mother.xStart, mother.yStart, mother.zStart);
-			/*drawBranch(mother.radius, u, v, w);*/
+			//drawBranch(mother.radius, u, v, w);
 			drawLeaf(u,v,w);
 		glPopMatrix();
 	}
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
-	/*glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);*/
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);*/
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
 }
 
 void display() {
@@ -244,7 +246,7 @@ void init() {
 	GLfloat white[] = { 1.0, 1.0, 1.0, 1.0 };
 	GLfloat direction[] = { 1.0, 1.0, 1.0, 0.0 };
 
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
+	//glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, white);
 	glMaterialf(GL_FRONT, GL_SHININESS, 30);
 
@@ -296,7 +298,7 @@ void drawLeaf(float x, float y, float z) {
 	glRotatef((GLfloat)phi, 0.0, 1.0, 0.0);
 	glRotatef((GLfloat)(-theta), 1.0, 0.0, 0.0);
 	glRotatef((GLfloat)(90),1.0,0.0,0.0);
-	glScalef(r/4.0, r/4.0, r/4.0);
+	glScalef(1/4.0, 1/4.0, 1/4.0);
 
 	glBegin(GL_POLYGON);
 	glVertex2f(0.0, 0.0);
