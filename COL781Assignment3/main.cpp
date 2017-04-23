@@ -61,10 +61,14 @@ struct tree {
 
 	float xPos, zPos;
 	float h1, h2;	    //branching angles (for monopodial, h2=0)
+	float hmin1, hmax1, hmin2, hmax2;
 	float R1, R2;		//contraction ratios
 	float divergence;	//divergence angle
 	float R, L;		    //Radius and length of the trunk
 	int level;			//number of growth levels
+
+	int category;
+	float K1, K2;//constant in characteristic function
 
 	//global variables
 	int startTime;
@@ -236,7 +240,7 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		//initialize tree
 		tree.START_FRAME = 0;
 		tree.END_FRAME = 0;//Updated in readFrames
-		tree.FPS = 100.0f;
+		tree.FPS = 100.0f;//Speed of wind
 		tree.TOTAL_FRAMES = 10.0f;
 
 		//Make this read from a file
@@ -255,6 +259,11 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 			>> tree.zPos
 			>> tree.h1
 			>> tree.h2
+			>> tree.category
+			>> tree.hmin1
+			>> tree.hmax1
+			>> tree.hmin2
+			>> tree.hmax2
 			>> tree.R1
 			>> tree.R2
 			>> tree.divergence
@@ -264,17 +273,9 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 
 		infile.close();
 
-		/*tree.xPos = 0.0f;
-		tree.zPos = 0.0f;
-		tree.h1 = 45.0f; 
-		tree.h2 = 0.0f;
-		tree.R1 = 0.7f; 
-		tree.R2 = 0.9f;
-		tree.divergence = 140.0f;	
-		tree.R = 0.15f; 
-		tree.L = 6.0f;
-		tree.level = 9;*/
-	
+		tree.K1 = -(tree.hmax1 - tree.hmin1) / (tree.level);
+		tree.K2 = -(tree.hmax2 - tree.hmin2) / (tree.level);
+		
 		
 		//initialization end
 
@@ -352,7 +353,7 @@ void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont,i
 
 //for drawing GMT1 model of tree using the given parameters
 void drawGMT1(int tree) {
-	float h1 = trees[tree].h1, h2 = trees[tree].h2;	//branching angles (for monopodial, h2=0)
+	float h1 = trees[tree].h1 , h2 = trees[tree].h2;	//branching angles (for monopodial, h2=0)
 	float R1 = trees[tree].R1, R2 = trees[tree].R2;		//contraction ratios
 	float divergence = trees[tree].divergence;				//divergence angle
 	float R = trees[tree].R, L = trees[tree].L;		//Radius and length of the trunk
@@ -368,6 +369,65 @@ void drawGMT1(int tree) {
 	glPopMatrix();
 	float H1 = h1;
 	for (int i = 1; i < level; i++) {
+		//Code for GMT4 
+		if (trees[tree].category == 1) {
+			h1 += trees[tree].K1;
+			h2 += trees[tree].K2;
+		}
+		else if (trees[tree].category == 2) {
+			if (i <= (level / 2)) {
+				h1 += trees[tree].K1*((float)i/(float)(level/2));
+				h2 += trees[tree].K2*((float)i / (float)(level / 2));
+			}
+			else {
+				h1 = trees[tree].hmin1*2 - (trees[tree].hmin1/exp(level/2)) * exp(i - (level/2));
+				h2 = trees[tree].hmin2 * 2 - (trees[tree].hmin2 / exp(level / 2)) * exp(i - (level / 2));
+			}
+		}
+		else if (trees[tree].category == 3) {
+			if (i > (level / 2)) {
+				h1 += trees[tree].K1*((float)i / (float)(level));
+				h2 += trees[tree].K2*((float)i / (float)(level));
+			}
+			else {
+				h1 = 10.0f + trees[tree].hmax1 - ( (trees[tree].hmax1 / (2.0f * exp(level / 2))) * exp(i));
+				h2 = trees[tree].hmax2 - (trees[tree].hmax2 / 2 * exp(level / 2)) * exp(i);
+			}
+		}
+		else if (trees[tree].category == 4) {
+			if (i <= (level / 2)) {
+				h1 += trees[tree].K1*((float)i / (float)(level / 2));
+				h2 += trees[tree].K2*((float)i / (float)(level / 2));
+			}
+			else if(i <= 0.75*level){
+				h1 = trees[tree].hmin1 * 2 - (trees[tree].hmin1 / exp(level*0.75)) * exp(i - (level / 2));
+				h2 = trees[tree].hmin2 * 2 - (trees[tree].hmin2 / exp(level*0.75)) * exp(i - (level / 2));
+			}
+			else{
+				h1 += trees[tree].K1*((float)i / (float)(level));
+				h2 += trees[tree].K2*((float)i / (float)(level));
+			}
+		}
+		else if (trees[tree].category == 5) {
+			if (i <= (level / 2)) {
+				h1 -= trees[tree].K1*((float)i / (float)(level / 2));
+				h2 -= trees[tree].K2*((float)i / (float)(level / 2));
+			}
+			else if (i == (level / 2 + 1)) {
+				h1 = trees[tree].hmax1;
+				h2 = trees[tree].hmax2;
+			}
+			else {
+				h1 = trees[tree].hmin1 * 2 - (trees[tree].hmin1 / exp(level / 2)) * exp(i - (level / 2));
+				h2 = trees[tree].hmin2 * 2 - (trees[tree].hmin2 / exp(level / 2)) * exp(i - (level / 2));
+			}
+		}
+
+		if ((H1 > 0 && h1 > 0) || (H1 < 0 && h1 < 0))
+			H1 = h1;
+		else
+			H1 = -h1;
+		//
 		queue<Branch> temp;
 		if (h2 == 0) {
 			//MONOPODIAL CASE FOR GENERATING CHILD BRANCHES OF AXIAL BRANCH:-
@@ -577,7 +637,6 @@ void animate() {
 				tree.currentFrame = tree.START_FRAME;
 				readKeyFrames(tree);
 				tree.startTime = glutGet(GLUT_ELAPSED_TIME);
-				tree.TOTAL_FRAMES = 10.0f;
 			}
 			tree.startTime = glutGet(GLUT_ELAPSED_TIME);
 		}
