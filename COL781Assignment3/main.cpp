@@ -6,6 +6,7 @@
 #include <random>
 #include <fstream>
 #include <sstream>
+#include <string>
 
 using namespace std;
 
@@ -16,11 +17,11 @@ GLint windowWidth = 1280;                    // Width of our window
 GLint windowHeight = 720;                    // Height of our window
 
 //Tree Parameters:-
-float h1=45.0f, h2=0.0f;	//branching angles (for monopodial, h2=0)
-float R1=0.7f, R2=0.9f;		//contraction ratios
-float divergence = 140.0f;				//divergence angle
-float R=0.15f, L=6.0f;		//Radius and length of the trunk
-int level = 9;				//number of growth levels
+//float h1=45.0f, h2=0.0f;	//branching angles (for monopodial, h2=0)
+//float R1=0.7f, R2=0.9f;		//contraction ratios
+//float divergence = 140.0f;				//divergence angle
+//float R=0.15f, L=6.0f;		//Radius and length of the trunk
+//int level = 9;				//number of growth levels
 
 //rendering parameters:-
 float angle = 0.0f;
@@ -164,7 +165,7 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		windz_mean = windz_mean - 0.05f;
 		glutPostRedisplay();
 		break;
-	case 'd':
+	/*case 'd':
 		divergence = divergence + 20;
 		cout << divergence << endl;
 		glutPostRedisplay();
@@ -173,15 +174,15 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		divergence = divergence - 20;
 		cout << divergence << endl;
 		glutPostRedisplay();
-		break;
-	case '+':
+		break;*/
+	/*case '+':
 		level = level + 1;
 		glutPostRedisplay();
 		break;
 	case '-':
 		level--;
 		glutPostRedisplay();
-		break;
+		break;*/
 	case 'n':
 		cout << "Enter co-ordinates of attractor" << endl;
 		float x1, y1, z1, f1;
@@ -236,11 +237,14 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		tree.START_FRAME = 0;
 		tree.END_FRAME = 0;//Updated in readFrames
 		tree.FPS = 100.0f;
-		tree.TOTAL_FRAMES = 100.0f;
+		tree.TOTAL_FRAMES = 10.0f;
 
 		//Make this read from a file
-		/*ifstream infile;
-		infile.open("tree" + numTrees + ".txt");
+		ifstream infile;
+		string str = "tree";
+		str += to_string(numTrees);
+		str += ".txt";
+		infile.open(str.c_str());
 
 		std::string line;
 		
@@ -258,9 +262,9 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 			>> tree.L
 			>> tree.level;
 
-		infile.close();*/
+		infile.close();
 
-		tree.xPos = 0.0f;
+		/*tree.xPos = 0.0f;
 		tree.zPos = 0.0f;
 		tree.h1 = 45.0f; 
 		tree.h2 = 0.0f;
@@ -269,7 +273,7 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		tree.divergence = 140.0f;	
 		tree.R = 0.15f; 
 		tree.L = 6.0f;
-		tree.level = 9;
+		tree.level = 9;*/
 	
 		
 		//initialization end
@@ -298,7 +302,7 @@ void drawBranch(float radius,float x, float y, float z) {
 }
 
 //For uniform and non-uniform deformations of a branch
-Point deform(float x, float y, float z) {
+Point deform(float x, float y, float z, int ind) {
 	float incx = 0.0f, incy = 0.0f, incz = 0.0f;
 	//attractors:-
 	for (int i = 0; i < attractors.size(); i++) {
@@ -316,11 +320,12 @@ Point deform(float x, float y, float z) {
 		incy -= factor*dy;
 		incz -= factor*dz;
 	}
-	return Point(x + incx + windx_mean + trees[0].windx, y + incy + windy_mean + trees[0].windy, z + incz + trees[0].windz + windz_mean, 0.0);
+	return Point(x + incx + windx_mean + trees[ind].windx, y + incy + windy_mean + trees[ind].windy, z + incz + trees[ind].windz + windz_mean, 0.0);
 }
 
 //to push children of a mother branch into the queue, after applying appropriate transformations
-void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont,int level) {
+void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont,int level,int tree) {
+	float divergence = trees[tree].divergence;				//divergence angle
 	float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
 	float length = sqrt(u*u + v*v + w*w);
 	float phi = atan2(u, w) * 180 / 3.14f;
@@ -341,19 +346,24 @@ void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont,i
 	xp /= wp;
 	yp /= wp;
 	zp /= wp;
-	Point p = deform(xp, yp, zp);
+	Point p = deform(xp, yp, zp,tree);
 	branches.push(Branch(cont*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + p.x , mother.yEnd + p.y, mother.zEnd + p.z ));
 }
 
 //for drawing GMT1 model of tree using the given parameters
-void drawGMT1() {
+void drawGMT1(int tree) {
+	float h1 = trees[tree].h1, h2 = trees[tree].h2;	//branching angles (for monopodial, h2=0)
+	float R1 = trees[tree].R1, R2 = trees[tree].R2;		//contraction ratios
+	float divergence = trees[tree].divergence;				//divergence angle
+	float R = trees[tree].R, L = trees[tree].L;		//Radius and length of the trunk
+	int level = trees[tree].level;				//number of growth levels
 	queue<Branch> branches;
 	glPushMatrix();
 		drawBranch(R, 0.0f, L, 0.0f);	//main trunk
 		//seeding the first two child branches:-
-		Point p = deform(R2*L*sin(h2*3.14 / 180.0), L + R2*L*cos(h2*3.14 / 180.0), 0.0);
+		Point p = deform(R2*L*sin(h2*3.14 / 180.0), L + R2*L*cos(h2*3.14 / 180.0), 0.0, tree);
 		branches.push(Branch(R2*R, 0.0f, L, 0.0f, p.x, p.y, p.z));
-		p = deform(R1*L*sin(h1*3.14 / 180.0), L + R1*L*cos(h1*3.14 / 180.0), 0.0);
+		p = deform(R1*L*sin(h1*3.14 / 180.0), L + R1*L*cos(h1*3.14 / 180.0), 0.0, tree);
 		branches.push(Branch(R1*R, 0.0f, L, 0.0f, p.x, p.y, p.z));
 	glPopMatrix();
 	float H1 = h1;
@@ -369,14 +379,14 @@ void drawGMT1() {
 				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
 				drawBranch(mother.radius, u, v, w);
 			glPopMatrix();
-			p = deform(mother.xEnd, mother.yEnd + R2*v, mother.zEnd);
+			p = deform(mother.xEnd, mother.yEnd + R2*v, mother.zEnd,tree);
 			temp.push(Branch(R2*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
 			if (divergence == 0) {
-				p = deform(R1*v*sin(H1*3.14 / 180.0) + mother.xEnd, mother.yEnd + R1*v*cos(H1*3.14 / 180.0), mother.zEnd);
+				p = deform(R1*v*sin(H1*3.14 / 180.0) + mother.xEnd, mother.yEnd + R1*v*cos(H1*3.14 / 180.0), mother.zEnd,tree);
 				temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
 			}
 			else {
-				p = deform(R1*v*sin(h1*3.14 / 180.0)*cos(divergence*i*3.14 / 180.0) + mother.xEnd, mother.yEnd + R1*v*cos(h1*3.14 / 180.0), -R1*v*sin(H1*i*3.14 / 180.0)*sin(divergence*3.14 / 180.0) + mother.zEnd);
+				p = deform(R1*v*sin(h1*3.14 / 180.0)*cos(divergence*i*3.14 / 180.0) + mother.xEnd, mother.yEnd + R1*v*cos(h1*3.14 / 180.0), -R1*v*sin(H1*i*3.14 / 180.0)*sin(divergence*3.14 / 180.0) + mother.zEnd, tree);
 				temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
 			}
 		}
@@ -388,8 +398,8 @@ void drawGMT1() {
 				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
 				drawBranch(mother.radius,u, v, w);
 			glPopMatrix();
-			pushChild(temp, mother, h2, R2, 0);
-			pushChild(temp, mother, H1, R1, 0);
+			pushChild(temp, mother, h2, R2, 0, tree);
+			pushChild(temp, mother, H1, R1, 0, tree);
 		}
 		while (!temp.empty()){
 			branches.push(temp.front());
@@ -435,7 +445,7 @@ void display() {
 			glRotatef((GLfloat)angle, 0.0f, 1.0f, 0.0f);
 			glTranslatef(trees[i].xPos, yPos, trees[i].zPos);
 			glScalef(0.15f, 0.15f, 0.15f);
-			drawGMT1();
+			drawGMT1(i);
 		glPopMatrix();
 	}
 	glutSwapBuffers();
@@ -455,6 +465,16 @@ void reshape(GLint w, GLint h) {
 		// height is smaller, so stretch out the width
 		glOrtho(-2.5*aspect, 2.5*aspect, -2.5, 2.5, -10.0, 10.0);
 	}
+
+	//if (w <= h) {
+	//	// width is smaller, so stretch out the height
+	//	gluPerspective(45.0 / 2.0f, h / w, 1.0, 1500.0f);
+	//}
+	//else {
+	//	// height is smaller, so stretch out the width
+	//	gluPerspective(45.0 / 2.0f, w / h, 1.0, 1500.0f);
+	//}
+
 }
 
 
@@ -572,27 +592,37 @@ void readKeyFrames(tree& tree) {
 	
 	tree.END_FRAME = 100;
 
-	keyFrames.push_back(animation_parameters());
+	/*keyFrames.push_back(animation_parameters());
 	keyFrames[0].windx = 0;
 	keyFrames[0].windy = 0;
-	keyFrames[0].windz = 0;
+	keyFrames[0].windz = 0;*/
 
-	for (int i = 1; i < tree.END_FRAME; i++)
+	ifstream infile;
+	infile.open("keyFrames.txt");
+
+	std::string line;
+
+	for (int i = 0; i < tree.END_FRAME; i++)
 	{
 		keyFrames.push_back(animation_parameters());
+		getline(infile, line);
+		istringstream iss(line);
 
-		keyFrames[i].windx = distribution(generator);
-		while(abs(keyFrames[i].windx ) > 0.03)
-			keyFrames[i].windx = distribution(generator);
-		/*while (abs(keyFrames[i].windy - keyFrames[i - 1].windy) > 0.1)
-			keyFrames[i].windy = distribution(generator);*/
-		keyFrames[i].windy = 0.0f;
-
-		keyFrames[i].windz = distribution(generator);
-		while (abs(keyFrames[i].windz) > 0.03)
-			keyFrames[i].windz = distribution(generator);
+		iss >> keyFrames[i].windx
+			>> keyFrames[i].windy
+			>> keyFrames[i].windz;
 
 	}
+
+	infile.close();
+
+	/*ofstream outfile;
+	outfile.open("keyFrames.txt");
+
+	for (int i = 0; i < tree.END_FRAME; i++)
+		outfile << keyFrames[i].windx << " " << keyFrames[i].windy << " " << keyFrames[i].windz << endl;
+
+	outfile.close();*/
 }
 
 float lerp(float x, float y, float t) {
