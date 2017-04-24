@@ -117,7 +117,7 @@ struct Point {
 float windx_mean = 0.0f, windy_mean = 0.0f, windz_mean = 0.0f;	//wind direction
 vector<Point> attractors;	//list of attractors
 vector<Point> inhibitors;	//list of inhibitors
-int ai = 0, ii = 0;
+int aii = 1;
 
 //function declarations
 void drawLeaf(float x, float y, float z);
@@ -201,32 +201,76 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		glutPostRedisplay();
 		break;
 	case 'c':
-		cout << "Enter index of attractor" << endl;
-		cin >> ai;
-		break;
-	case 'C':
-		cout << "Enter index of inhibitor" << endl;
-		cin >> ii;
+		cout << "Enter index of attractor(positive) or of inhibitor(negative)" << endl;
+		cin >> aii;
 		break;
 	case '1':
-		if (ai >= 0 && ai < attractors.size()) {
-			attractors[ai].x += 0.5f;
+		if (aii >= 1 && aii <= attractors.size()) {
+			attractors[aii-1].x += 0.5f;
+			glutPostRedisplay();
+		}
+		else if (aii <= -1 && -aii <= inhibitors.size()) {
+			inhibitors[-aii - 1].x += 0.5f;
 			glutPostRedisplay();
 		}
 		else
 			cout << "This index does not exist" << endl;
 		break;
 	case '2':
-		if (ai >= 0 && ai < attractors.size()) {
-			attractors[ai].y += 0.5f;
+		if (aii >= 1 && aii <= attractors.size()) {
+			attractors[aii - 1].y += 0.5f;
+			glutPostRedisplay();
+		}
+		else if (aii <= -1 && -aii <= inhibitors.size()) {
+			inhibitors[-aii - 1].y += 0.5f;
 			glutPostRedisplay();
 		}
 		else
 			cout << "This index does not exist" << endl;
 		break;
 	case '3':
-		if (ai >= 0 && ai < attractors.size()) {
-			attractors[ai].z += 0.5f;
+		if (aii >= 1 && aii <= attractors.size()) {
+			attractors[aii - 1].z += 0.5f;
+			glutPostRedisplay();
+		}
+		else if (aii <= -1 && -aii <= inhibitors.size()) {
+			inhibitors[-aii - 1].z += 0.5f;
+			glutPostRedisplay();
+		}
+		else
+			cout << "This index does not exist" << endl;
+		break;
+	case '4':
+		if (aii >= 1 && aii <= attractors.size()) {
+			attractors[aii - 1].x -= 0.5f;
+			glutPostRedisplay();
+		}
+		else if (aii <= -1 && -aii <= inhibitors.size()) {
+			inhibitors[-aii - 1].x -= 0.5f;
+			glutPostRedisplay();
+		}
+		else
+			cout << "This index does not exist" << endl;
+		break;
+	case '5':
+		if (aii >= 1 && aii <= attractors.size()) {
+			attractors[aii - 1].y -= 0.5f;
+			glutPostRedisplay();
+		}
+		else if (aii <= -1 && -aii <= inhibitors.size()) {
+			inhibitors[-aii - 1].y -= 0.5f;
+			glutPostRedisplay();
+		}
+		else
+			cout << "This index does not exist" << endl;
+		break;
+	case '6':
+		if (aii >= 1 && aii <= attractors.size()) {
+			attractors[aii - 1].z -= 0.5f;
+			glutPostRedisplay();
+		}
+		else if (aii <= -1 && -aii <= inhibitors.size()) {
+			inhibitors[-aii - 1].z -= 0.5f;
 			glutPostRedisplay();
 		}
 		else
