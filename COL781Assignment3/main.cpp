@@ -335,6 +335,7 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 	case 32://Space bar start animation
 		for (int i = 0; i < trees.size(); i++) {
 			trees[i].growth = false;
+			trees[i].FPS = 100.0f;
 		}
 		glutIdleFunc(animate);//register idle callback
 		break;
@@ -342,6 +343,7 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		for (int i = 0; i < trees.size(); i++) {
 			trees[i].growth = true;
 			trees[i].level = 0;
+			trees[i].FPS = 10.0f;
 		}
 		glutIdleFunc(animateGrowth);//register idle callback
 		break;
