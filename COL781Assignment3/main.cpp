@@ -316,8 +316,9 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 			>> tree.R
 			>> tree.L
 			>> tree.level;
+
 		tree.growth = false;
-		tree.level = 0;//Comment out when not showing animation growth
+		
 		infile.close();
 
 		tree.K1 = -(tree.hmax1 - tree.hmin1) / (tree.level);
@@ -332,11 +333,15 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 	}
 	break;
 	case 32://Space bar start animation
+		for (int i = 0; i < trees.size(); i++) {
+			trees[i].growth = false;
+		}
 		glutIdleFunc(animate);//register idle callback
 		break;
 	case 'g'://Space bar start animation
 		for (int i = 0; i < trees.size(); i++) {
 			trees[i].growth = true;
+			trees[i].level = 0;
 		}
 		glutIdleFunc(animateGrowth);//register idle callback
 		break;
@@ -523,8 +528,8 @@ void drawGMT1(int tree) {
 			temp.pop();
 		}
 	}
-
-	//glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
+	if(!trees[tree].growth)
+		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
 	while (!branches.empty()) {
 		Branch mother = branches.front();
 		branches.pop();
@@ -537,8 +542,10 @@ void drawGMT1(int tree) {
 		}
 		glPushMatrix();
 			glTranslatef(mother.xStart, mother.yStart, mother.zStart);
-			drawBranch(mother.radius, u, v, w);
-			//drawLeaf(u,v,w);
+			if(trees[tree].growth)
+				drawBranch(mother.radius, u, v, w);
+			else
+				drawLeaf(u,v,w);
 		glPopMatrix();
 	}
 	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, blue);
@@ -729,7 +736,8 @@ void animateGrowth() {
 
 		if (t_interpolation > 1.0f - epsilon) {
 			tree.level++;
-			if (tree.level >= 9)
+			tree.t_interpolation = 0.0;
+			if (tree.level >= 9)//Growing uptil level 9
 				glutIdleFunc(NULL);
 			tree.startTime = glutGet(GLUT_ELAPSED_TIME);
 		}
