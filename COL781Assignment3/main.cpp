@@ -626,9 +626,13 @@ int main(int argc, char** argv) {
 	//initializing the light sources and enabling the hidden surface removal
 	init();
 
+	cout << "Press L to insert a tree" << endl;
 	cout << "Press A for changing angle" << endl;
 	cout << "Press M for moving the model" << endl;
 	cout << "Press X, Y and Z for changing the wind velocity vector" << endl;
+	cout << "Press n or N for insering attractors/inhibitors" << endl;
+	cout << "Press c for choosing aparticular attractor/inhibitor" << endl;
+	cout << "Press 1,2,3 and 4,5,6 for increasing/decreasing the x,y,z co-ordinates of the chosen control point" << endl;
 	// enter GLUT event processing cycle
 	//glutPassiveMotionFunc(update);		//to update mouse pointer positions
 	glutMainLoop();//enter the event loop
