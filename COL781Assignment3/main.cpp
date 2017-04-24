@@ -308,6 +308,8 @@ Point deform(float x, float y, float z, int ind) {
 	//attractors:-
 	for (int i = 0; i < attractors.size(); i++) {
 		float dx = attractors[i].x - x, dy = attractors[i].y - y, dz = attractors[i].z - z;
+		if (dx == 0 && dy == 0 && dz == 0)
+			continue;
 		float factor = attractors[i].factor / sqrt(dx*dx + dy*dy + dz*dz);
 		incx += factor*dx;
 		incy += factor*dy;
@@ -316,6 +318,8 @@ Point deform(float x, float y, float z, int ind) {
 	//inhibitors:-
 	for (int i = 0; i < inhibitors.size(); i++) {
 		float dx = inhibitors[i].x - x, dy = inhibitors[i].y - y, dz = inhibitors[i].z - z;
+		if (dx == 0 && dy == 0 && dz == 0)
+			continue;
 		float factor = inhibitors[i].factor / sqrt(dx*dx + dy*dy + dz*dz);
 		incx -= factor*dx;
 		incy -= factor*dy;
@@ -347,8 +351,8 @@ void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont,i
 	xp /= wp;
 	yp /= wp;
 	zp /= wp;
-	Point p = deform(xp, yp, zp,tree);
-	branches.push(Branch(cont*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, mother.xEnd + p.x , mother.yEnd + p.y, mother.zEnd + p.z ));
+	Point p = deform(mother.xEnd + xp, mother.yEnd + yp, mother.zEnd + zp, tree);
+	branches.push(Branch(cont*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
 }
 
 //for drawing GMT1 model of tree using the given parameters
