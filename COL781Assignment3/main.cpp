@@ -62,7 +62,7 @@ struct tree {
 	float xPos, zPos;
 	float h1, h2;	    //branching angles (for monopodial, h2=0)
 	float hmin1, hmax1, hmin2, hmax2;
-	float R1, R2;		//contraction ratios
+	float R0, R1, R2;		//contraction ratios
 	float divergence;	//divergence angle
 	float R, L;		    //Radius and length of the trunk
 	int level;			//number of growth levels
@@ -315,7 +315,8 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 			>> tree.divergence
 			>> tree.R
 			>> tree.L
-			>> tree.level;
+			>> tree.level
+			>> tree.R0;
 
 		tree.growth = false;
 		
@@ -418,13 +419,18 @@ void pushChild(queue<Branch> &branches, Branch mother, float angle, float cont,i
 //for drawing GMT1 model of tree using the given parameters
 void drawGMT1(int tree) {
 	float h1 = trees[tree].h1 , h2 = trees[tree].h2;	//branching angles (for monopodial, h2=0)
-	float R1 = trees[tree].R1, R2 = trees[tree].R2;		//contraction ratios
+	float R1 = trees[tree].R1, R2 = trees[tree].R2, R0 = trees[tree].R0;		//contraction ratios
 	float divergence = trees[tree].divergence;				//divergence angle
 	float R = trees[tree].R, L = trees[tree].L;		//Radius and length of the trunk
 	int level = trees[tree].level;				//number of growth levels
 	queue<Branch> branches;
 	glPushMatrix();
 		drawBranch(R, 0.0f, L, 0.0f);	//main trunk
+		if (trees[tree].category == 6) {
+			//GMT3 CASE:-
+			Point p = deform(0.0, L + R0*L, 0.0, tree);
+			branches.push(Branch(R0*R, 0.0f, L, 0.0f, p.x, p.y, p.z));
+		}
 		//seeding the first two child branches:-
 		Point p = deform(R2*L*sin(h2*3.14 / 180.0), L + R2*L*cos(h2*3.14 / 180.0), 0.0, tree);
 		branches.push(Branch(R2*R, 0.0f, L, 0.0f, p.x, p.y, p.z));
@@ -514,6 +520,22 @@ void drawGMT1(int tree) {
 				temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
 			}
 		}
+		if (trees[tree].category == 6) {
+			Branch mother = branches.front();
+			branches.pop();
+			float u = mother.xEnd - mother.xStart, v = mother.yEnd - mother.yStart, w = mother.zEnd - mother.zStart;
+			glPushMatrix();
+				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
+				drawBranch(mother.radius, u, v, w);
+			glPopMatrix(); 
+			p = deform(mother.xEnd, mother.yEnd + R0*v, mother.zEnd, tree);
+			temp.push(Branch(R0*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
+			p = deform(R1*v*sin(h1*3.14 / 180.0)*cos(divergence*i*3.14 / 180.0) + mother.xEnd, mother.yEnd + R1*v*cos(h1*3.14 / 180.0), -R1*v*sin(h1*i*3.14 / 180.0)*sin(divergence*3.14 / 180.0) + mother.zEnd, tree);
+			temp.push(Branch(R1*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
+			p = deform(R2*v*sin(h2*3.14 / 180.0)*cos(divergence*i*3.14 / 180.0) + mother.xEnd, mother.yEnd + R2*v*cos(h2*3.14 / 180.0), -R2*v*sin(h2*i*3.14 / 180.0)*sin(divergence*3.14 / 180.0) + mother.zEnd, tree);
+			temp.push(Branch(R2*mother.radius, mother.xEnd, mother.yEnd, mother.zEnd, p.x, p.y, p.z));
+
+		}
 		while (!branches.empty()){
 			Branch mother = branches.front();
 			branches.pop();
@@ -522,6 +544,8 @@ void drawGMT1(int tree) {
 				glTranslatef(mother.xStart, mother.yStart, mother.zStart);
 				drawBranch(mother.radius,u, v, w);
 			glPopMatrix();
+			if (trees[tree].category == 6)
+				pushChild(temp, mother, 0, R0, 0, tree);
 			pushChild(temp, mother, h2, R2, 0, tree);
 			pushChild(temp, mother, H1, R1, 0, tree);
 		}
