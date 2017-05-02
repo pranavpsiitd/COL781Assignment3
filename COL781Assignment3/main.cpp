@@ -1,6 +1,7 @@
 ﻿#include "GL\glew.h"
 #include "GL\freeglut.h"
 #include <iostream>
+#include <soil.h>
 #include <cmath>
 #include <queue>
 #include <random>
@@ -9,6 +10,11 @@
 #include <string>
 
 using namespace std;
+
+//Texture
+GLuint textureId; //The id of the skin texture
+GLUquadric *quad; //quadric object to handle textute coordinates for glu primitives
+
 
 //MACROS
 #define epsilon 0.001
@@ -66,7 +72,7 @@ struct tree {
 	float divergence;	//divergence angle
 	float R, L;		    //Radius and length of the trunk
 	int level;			//number of growth levels
-
+	int max_level;
 	int category;
 	float K1, K2;//constant in characteristic function
 
@@ -291,9 +297,12 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 
 		//Make this read from a file
 		ifstream infile;
-		string str = "tree";
+		/*string str = "tree";
 		str += to_string(numTrees);
-		str += ".txt";
+		str += ".txt";*/
+		string str;
+		cout << "Enter the name of input file" << endl;
+		cin >> str;
 		infile.open(str.c_str());
 
 		std::string line;
@@ -318,7 +327,8 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 			>> tree.level
 			>> tree.R0;
 
-		tree.growth = false;
+		tree.max_level = tree.level;
+		tree.growth = true;
 		
 		infile.close();
 
@@ -352,7 +362,18 @@ void handleKeypressUp(unsigned char theKey, int x, int y){
 		break;
 	}
 }
+//for loading textures from image files
+void loadTexture() {
+	//Skin Texture:-
+	glGenTextures(1, &textureId); //Make room for our texture
+	glBindTexture(GL_TEXTURE_2D, textureId); //Tell OpenGL which texture to edit
+											 //Map the image to the texture:-
+	int width, height;
+	unsigned char* image = SOIL_load_image("tex.jpg", &width, &height, 0, SOIL_LOAD_RGBA);
+	cout << width << " " << height << endl;
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 
+}
 //for drawing a cylindrical branch from (0,0,0) to (x,y,z)
 void drawBranch(float radius,float x, float y, float z) {
 	float r = sqrt(x*x + y*y + z*z);
@@ -360,7 +381,7 @@ void drawBranch(float radius,float x, float y, float z) {
 	float theta = asin(y / r)*180/3.14f;
 	glRotatef((GLfloat)phi, 0.0, 1.0, 0.0);
 	glRotatef((GLfloat)(-theta), 1.0, 0.0, 0.0);
-	glutSolidCylinder(radius, r, 5, 5);
+	gluCylinder(quad,radius,radius,r, 5, 5);
 }
 
 //For uniform and non-uniform deformations of a branch
@@ -595,6 +616,14 @@ void drawGMT1(int tree) {
 void display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);
+
+	//Texture
+	glEnable(GL_TEXTURE_2D);
+	//Texture properties for skin texture:-
+	glBindTexture(GL_TEXTURE_2D, textureId);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	gluQuadricTexture(quad, 1);	//initializing the quadric object
 	
 	for (int i = 0; i < trees.size(); i++) {
 		glPushMatrix();
@@ -652,6 +681,9 @@ void init() {
 	glEnable(GL_LIGHT0);                  // turn LIGHT0 on
 	glEnable(GL_DEPTH_TEST);              // so the renderer considers depth
 	glEnable(GL_NORMALIZE);
+
+	quad = gluNewQuadric();				   //initialize the quadric object
+	loadTexture();			   //load texture from file and store its id
 }
 
 // The usual application statup code.
@@ -763,7 +795,7 @@ void animateGrowth() {
 		if (t_interpolation > 1.0f - epsilon) {
 			tree.level++;
 			tree.t_interpolation = 0.0;
-			if (tree.level >= 9)//Growing uptil level 9
+			if (tree.level >= tree.max_level)//Growing uptil level 9
 				glutIdleFunc(NULL);
 			tree.startTime = glutGet(GLUT_ELAPSED_TIME);
 		}
