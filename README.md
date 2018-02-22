@@ -2,7 +2,7 @@
 Based on the paper Botanical Tree Image Generation: http://ieeexplore.ieee.org/document/4055766/ 
 
 
-A Visual Studio project that uses OpenGL to simulate procedurally generated Botanical trees modeled as L-system. 
+A Visual Studio 2015 project that uses OpenGL to simulate procedurally generated Botanical trees modeled as L-system. 
 Some example tree models are given in various .txt files in the project folder. Each tree is placed in X-Z plane and is defined by set of 16 parameters.
 These 16 params are stored in the these files, seperated by space:-
 
